@@ -1,0 +1,30 @@
+### Cloud: generates clouds
+
+Creates cloud images in png format from a procedurally
+generated noise.
+
+The noise library (src/noise.zig) is a port of KdotJPG OpenSimplex2 noise.
+	https://github.com/KdotJPG/OpenSimplex2
+	Public domain
+
+The png library (src/png.zig) is a port of Michael Schwars libattopng.
+	https://github.com/misc0110/libattopng
+	Mit license
+
+### Build and install
+
+You will need the stable zig release (version 0.11).
+To build and install in `$(HOME)/.local/bin/cloud`, run:
+
+	zig build -Doptimize=ReleaseSafe -p $(HOME)/.local/
+
+### usage
+
+$ cloud [options]
+	-s <seed> (default to std.time.timestamp())
+	-w <width> (default to 512)
+	-h <height> (default to 512)
+    -b <backround-color> (default 00bbff)
+    -f <foreground-color> (default ffffff)
+    -o <outputfile> (default cloud.png)
+
