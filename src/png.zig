@@ -157,70 +157,70 @@ pub const pngStruct = struct {
 	/////////////////////////////////////////////////////////////////////////
 	// Utils
 
-	fn out_raw_write(png: *pngStruct, data: []const u8, len: usize) void {
+	fn outRawWrite(png: *pngStruct, data: []const u8, len: usize) void {
 	    for (0..len) |i| {
 	        png.out[png.out_pos] = data[i];
 	        png.out_pos += 1;
 		}
 	}
 
-	fn out_raw_uint(png: *pngStruct, val: u32) void {
+	fn outRawU32(png: *pngStruct, val: u32) void {
 		std.mem.writeIntNative(u32, png.out[png.out_pos..][0..@sizeOf(u32)], val);
 	    png.out_pos += 4;
 	}
 
-	fn out_raw_uint16(png: *pngStruct, val: u16) void {
+	fn outRawU16(png: *pngStruct, val: u16) void {
 	    std.mem.writeIntNative(u16, png.out[png.out_pos..][0..@sizeOf(u16)], val);
 	    png.out_pos += 2;
 	}
 
-	fn out_raw_uint8(png: *pngStruct, val: u8) void {
+	fn outRawU8(png: *pngStruct, val: u8) void {
 		png.out[png.out_pos] = val;
 	    png.out_pos += 1;
 	}
 
-	fn new_chunk(png: *pngStruct,name: []const u8, len: usize) void {
+	fn newChunk(png: *pngStruct,name: []const u8, len: usize) void {
 	    png.crc = 0xffffffff;
-	    png.out_raw_uint(swap32(@as(u32, @intCast(len))) );
+	    png.outRawU32(swap32(@as(u32, @intCast(len))) );
 	    png.crc = crc(name, 4, png.crc);
-	    png.out_raw_write(name, 4);
+	    png.outRawWrite(name, 4);
 	}
 
-	fn end_chunk(png: *pngStruct) void {
-	    png.out_raw_uint(swap32(~png.crc));
+	fn endChunk(png: *pngStruct) void {
+	    png.outRawU32(swap32(~png.crc));
 	    //std.debug.print("end chunk crc: {d} {d} {d}\n", .{png.crc, ~png.crc, swap32(~png.crc)});
 	}
 
-	fn out_uint32(png: *pngStruct, val: u32) void {
+	fn outU32(png: *pngStruct, val: u32) void {
 		var data: [4]u8 = undefined;
 		std.mem.writeIntNative(u32, data[0..4], val);
 	    png.crc = crc(&data, 4, png.crc);
-	    png.out_raw_uint(val);
+	    png.outRawU32(val);
 	}
 
-	fn out_uint16(png: *pngStruct, val: u16) void {
+	fn outU16(png: *pngStruct, val: u16) void {
 		var data: [2]u8 = undefined;
 		std.mem.writeIntNative(u16, data[0..2], val);
 	    png.crc = crc(&data, 2, png.crc);
-	    png.out_raw_uint16(val);
+	    png.outRawU16(val);
 	}
 
-	fn out_uint8(png: *pngStruct, val: u8) void {
+	fn outU8(png: *pngStruct, val: u8) void {
 		const data = [_]u8 {val};
 	    png.crc = crc(&data, 1, png.crc);
-	    png.out_raw_uint8(val);
+	    png.outRawU8(val);
 	}
 
-	fn out_write(png: *pngStruct, data: []const u8, len: usize) void {
+	fn outWrite(png: *pngStruct, data: []const u8, len: usize) void {
 		//todo: png->crc = libattopng_crc((const unsigned char *) data, len, png->crc);
 	    png.crc = crc(data, len, png.crc);
-	    png.out_raw_write(data, len);
+	    png.outRawWrite(data, len);
 	}
 
-	fn out_write_adler(png: *pngStruct, val: u8) void {
-	    //png.out_write(png, (char *) &data, 1);
+	fn outWriteAdler(png: *pngStruct, val: u8) void {
+	    //png.outWrite(png, (char *) &data, 1);
 		const data = [_]u8 {val};
-	    png.out_write(&data, 1);
+	    png.outWrite(&data, 1);
 		//std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
 	    //png.s1 = @as(u16, (png.s1 +% val) % LIBATTOPNG_ADLER_BASE);
 	    //png.s2 = @as(u16, (png.s2 + png.s1) % LIBATTOPNG_ADLER_BASE);
@@ -236,21 +236,21 @@ pub const pngStruct = struct {
 		//std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
 	}
 
-	fn pixel_header(png: *pngStruct, offset: usize, bpl: usize) void {
+	fn pixelHeader(png: *pngStruct, offset: usize, bpl: usize) void {
 	    if (offset > bpl) {
 	        // not the last line
-	        //libattopng_out_write(png, "\0", 1);
+	        //libattopng_outWrite(png, "\0", 1);
 	        const nul = [1]u8 {0};
-	        png.out_write(&nul, 1);
-	        png.out_uint16(@as(u16, @intCast(bpl)) );
-	        png.out_uint16(~@as(u16, @intCast(bpl)) );
+	        png.outWrite(&nul, 1);
+	        png.outU16(@as(u16, @intCast(bpl)) );
+	        png.outU16(~@as(u16, @intCast(bpl)) );
 	    } else {
 	        // last line
-	        //libattopng_out_write(png, "\1", 1);
+	        //libattopng_outWrite(png, "\1", 1);
 	        const one = [1]u8 {1};
-	        png.out_write(&one, 1);
-	        png.out_uint16(@as(u16, @intCast(offset)) );
-	        png.out_uint16(~@as(u16, @intCast(offset)) );
+	        png.outWrite(&one, 1);
+	        png.outU16(@as(u16, @intCast(offset)) );
+	        png.outU16(~@as(u16, @intCast(offset)) );
 	    }
 	}
 
@@ -267,22 +267,22 @@ pub const pngStruct = struct {
 	    errdefer png.allocator.free(png.out);
 
 		// PNG header
-	    // libattopng_out_raw_write(png, "\211PNG\r\n\032\n", 8);
-		png.out_raw_uint8(137);
-		png.out_raw_write("PNG\r\n", 5);
-		png.out_raw_uint8(26);
-		png.out_raw_write("\n", 1);
+	    // libattopng_outRawWrite(png, "\211PNG\r\n\032\n", 8);
+		png.outRawU8(137);
+		png.outRawWrite("PNG\r\n", 5);
+		png.outRawU8(26);
+		png.outRawWrite("\n", 1);
 
 		// IHDR
-		png.new_chunk("IHDR", 13);
-		png.out_uint32(swap32( @as(u32, @intCast(png.width)) ));
-		png.out_uint32(swap32(@as(u32, @intCast(png.height)) ));
-	    png.out_uint8(8); // bit depth
-	    png.out_uint8(@intFromEnum(png.pngtype));
-	    png.out_uint8(0); // compression
-	    png.out_uint8(0); // filter
-	    png.out_uint8(0); // interlace method
-	    png.end_chunk();
+		png.newChunk("IHDR", 13);
+		png.outU32(swap32( @as(u32, @intCast(png.width)) ));
+		png.outU32(swap32(@as(u32, @intCast(png.height)) ));
+	    png.outU8(8); // bit depth
+	    png.outU8(@intFromEnum(png.pngtype));
+	    png.outU8(0); // compression
+	    png.outU8(0); // filter
+	    png.outU8(0); // interlace method
+	    png.endChunk();
 
 
 	    // palette //
@@ -292,22 +292,22 @@ pub const pngStruct = struct {
 	        if (s < 16) {
 	            s = 16; // minimum palette length
 	        }
-	        png.new_chunk("PLTE", 3 * s);
+	        png.newChunk("PLTE", 3 * s);
 	        for (0..s) |i| {
 	            entry[0] = @as(u8, @intCast(png.palette[i] & 255));
 	            entry[1] = @as(u8, @intCast((png.palette[i] >> 8) & 255));
 	            entry[2] = @as(u8, @intCast((png.palette[i] >> 16) & 255));
-	            png.out_write(&entry, 3);
+	            png.outWrite(&entry, 3);
 	        }
-	        png.end_chunk();
+	        png.endChunk();
 
 	        // transparency
-	        png.new_chunk("tRNS", s);
+	        png.newChunk("tRNS", s);
 	        for (0..s) |j| {
 	            entry[0] = @as(u8, @intCast((png.palette[j] >> 24) & 255));
-	            png.out_write(&entry, 1);
+	            png.outWrite(&entry, 1);
 	        }
-	        png.end_chunk();
+	        png.endChunk();
 	    }
 
 	    // data
@@ -320,10 +320,10 @@ pub const pngStruct = struct {
 	    var raw_size = png.height * bpl;
 	    var size = 2 + png.height * (5 + bpl) + 4;
 	    //std.debug.print("width: {d}, height: {d}, bpp: {d}, bpl: {d}\n", .{png.width, png.height, png.bpp, bpl});
-	    png.new_chunk("IDAT", size);
-	    //png.out_write(png, "\170\332", 2);
-	    png.out_uint8(120);
-	    png.out_uint8(218);
+	    png.newChunk("IDAT", size);
+	    //png.outWrite(png, "\170\332", 2);
+	    png.outU8(120);
+	    png.outU8(218);
 
 	    var pixel: usize = 0;
 	    var index: usize = 0;
@@ -331,15 +331,15 @@ pub const pngStruct = struct {
 	    while (pos < png.width * png.height) : (pos += 1) {
 	        if (index == 0) {
 	            // line header
-	            png.pixel_header(raw_size, bpl);
-	            png.out_write_adler(0); // no filter
+	            png.pixelHeader(raw_size, bpl);
+	            png.outWriteAdler(0); // no filter
 	            raw_size -= 1;
 	        }
 
 	        // pixel
 	        for (0..png.bpp) |_| {
 	        	//std.debug.print("pixel[{d}]: {x}\n", .{pixel, png.data[pixel]});
-	            png.out_write_adler(png.data[pixel]);
+	            png.outWriteAdler(png.data[pixel]);
 	            pixel += 1;
 	        }
 	        if (png.pngtype == .rgb) {
@@ -354,12 +354,12 @@ pub const pngStruct = struct {
 	    png.s1 %= LIBATTOPNG_ADLER_BASE;
 	    png.s2 %= LIBATTOPNG_ADLER_BASE;
 	    //std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
-	    png.out_uint32(swap32(@as(u32, (@as(u32, png.s2) << 16) | png.s1)) );
-	    png.end_chunk();
+	    png.outU32(swap32(@as(u32, (@as(u32, png.s2) << 16) | png.s1)) );
+	    png.endChunk();
 
 	    // end of image
-	    png.new_chunk("IEND", 0);
-	    png.end_chunk();
+	    png.newChunk("IEND", 0);
+	    png.endChunk();
 	}
 
 	pub fn write(png: *pngStruct, filename: []const u8) !void {
@@ -414,4 +414,9 @@ test "color" {
 	try png.build();
 	try png.write("test.png");
 	try png.deinit();
+}
+
+test "swap32" {
+	const x = 0xaabbccdd;
+	std.debug.print("swap32({x}) = {x}\n", .{x, swap32(x)});
 }

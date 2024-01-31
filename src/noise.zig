@@ -44,7 +44,7 @@ pub fn noise2(seed: i64, x: f64, y: f64) f32 {
     const xs: f64 = x + s;
     const ys: f64 = y + s;
 
-    return noise2_UnskewedBase(seed, xs, ys);
+    return noise2UnksewedBase(seed, xs, ys);
 }
 
 
@@ -53,16 +53,16 @@ pub fn noise2(seed: i64, x: f64, y: f64) f32 {
 //    Probably slightly less optimal for heightmaps or continent maps,
 //    unless your map is centered around an equator. It's a subtle
 //    difference, but the option is here to make it an easy choice.
-pub fn noise2_ImproveX(seed: i64, x: f64, y: f64) f32 {
+pub fn noise2ImproveX(seed: i64, x: f64, y: f64) f32 {
     // Skew transform and rotation baked into one.
     const xx = x * ROOT2OVER2;
     const yy = y * (ROOT2OVER2 * (1.0 + 2.0 * SKEW_2D));
 
-    return noise2_UnskewedBase(seed, yy + xx, yy - xx);
+    return noise2UnksewedBase(seed, yy + xx, yy - xx);
 }
 
 // 2D Simplex noise base.
-fn noise2_UnskewedBase(seed: i64, xs: f64, ys: f64) f32 {
+fn noise2UnksewedBase(seed: i64, xs: f64, ys: f64) f32 {
     // Get base points and offsets.
     const xsb: i64 = fastFloor(xs);
     const ysb: i64 = fastFloor(ys);
@@ -130,11 +130,11 @@ fn noise2_UnskewedBase(seed: i64, xs: f64, ys: f64) f32 {
 //    3D OpenSimplex2 noise, with better visual isotropy in (X, Y).
 //    Recommended for 3D terrain and time-varied animations.
 //    The Z coordinate should always be the "different" coordinate in whatever your use case is.
-//    If Y is vertical in world coordinates, call noise3_ImproveXZ(x, z, Y) or use noise3_XZBeforeY.
-//    If Z is vertical in world coordinates, call noise3_ImproveXZ(x, y, Z).
-//    For a time varied animation, call noise3_ImproveXY(x, y, T).
+//    If Y is vertical in world coordinates, call noise3ImproveXZ(x, z, Y) or use noise3_XZBeforeY.
+//    If Z is vertical in world coordinates, call noise3ImproveXZ(x, y, Z).
+//    For a time varied animation, call noise3ImproveXY(x, y, T).
 
-pub fn noise3_ImproveXY(seed: i64, x: f64, y: f64, z: f64) f32 {
+pub fn noise3ImproveXY(seed: i64, x: f64, y: f64, z: f64) f32 {
     // Re-orient the cubic lattices without skewing, so Z points up the main lattice diagonal,
     // and the planes formed by XY are moved far out of alignment with the cube faces.
     // Orthonormal rotation. Not a skew transform.
@@ -146,17 +146,17 @@ pub fn noise3_ImproveXY(seed: i64, x: f64, y: f64, z: f64) f32 {
     const zr: f64 = xy * -ROOT3OVER3 + zz;
 
     // Evaluate both lattices to form a BCC lattice.
-    return noise3_UnrotatedBase(seed, xr, yr, zr);
+    return noise3UnrotatedBase(seed, xr, yr, zr);
 }
 
 //    3D OpenSimplex2 noise, with better visual isotropy in (X, Z).
 //    Recommended for 3D terrain and time-varied animations.
 //    The Y coordinate should always be the "different" coordinate in whatever your use case is.
-//    If Y is vertical in world coordinates, call noise3_ImproveXZ(x, Y, z).
-//    If Z is vertical in world coordinates, call noise3_ImproveXZ(x, Z, y) or use noise3_ImproveXY.
-//    For a time varied animation, call noise3_ImproveXZ(x, T, y) or use noise3_ImproveXY.
+//    If Y is vertical in world coordinates, call noise3ImproveXZ(x, Y, z).
+//    If Z is vertical in world coordinates, call noise3ImproveXZ(x, Z, y) or use noise3ImproveXY.
+//    For a time varied animation, call noise3ImproveXZ(x, T, y) or use noise3ImproveXY.
 
-pub fn noise3_ImproveXZ(seed: i64, x: f64, y: f64, z: f64) f32 {
+pub fn noise3ImproveXZ(seed: i64, x: f64, y: f64, z: f64) f32 {
     // Re-orient the cubic lattices without skewing, so Y points up the main lattice diagonal,
     // and the planes formed by XZ are moved far out of alignment with the cube faces.
     // Orthonormal rotation. Not a skew transform.
@@ -168,14 +168,14 @@ pub fn noise3_ImproveXZ(seed: i64, x: f64, y: f64, z: f64) f32 {
     const yr: f64 = xz * -ROOT3OVER3 + yy;
 
     // Evaluate both lattices to form a BCC lattice.
-    return noise3_UnrotatedBase(seed, xr, yr, zr);
+    return noise3UnrotatedBase(seed, xr, yr, zr);
 }
 
 //    3D OpenSimplex2 noise, fallback rotation option
-//    Use noise3_ImproveXY or noise3_ImproveXZ instead, wherever appropriate.
+//    Use noise3ImproveXY or noise3ImproveXZ instead, wherever appropriate.
 //    They have less diagonal bias. This function's best use is as a fallback.
 
-pub fn noise3_Fallback(seed: i64, x: f64, y: f64, z: f64) f32 {
+pub fn noise3Fallback(seed: i64, x: f64, y: f64, z: f64) f32 {
     // Re-orient the cubic lattices via rotation, to produce a familiar look.
     // Orthonormal rotation. Not a skew transform.
     const r = FALLBACK_ROTATE_3D * (x + y + z);
@@ -184,12 +184,12 @@ pub fn noise3_Fallback(seed: i64, x: f64, y: f64, z: f64) f32 {
     const zr = r - z;
 
     // Evaluate both lattices to form a BCC lattice.
-    return noise3_UnrotatedBase(seed, xr, yr, zr);
+    return noise3UnrotatedBase(seed, xr, yr, zr);
 }
 
 //    Generate overlapping cubic lattices for 3D OpenSimplex2 noise.
 
-fn noise3_UnrotatedBase(seed: i64, xr: f64, yr: f64, zr: f64) f32 {
+fn noise3UnrotatedBase(seed: i64, xr: f64, yr: f64, zr: f64) f32 {
     var vseed: i64 = seed;
 
     // Get base points and offsets.
@@ -312,12 +312,12 @@ fn noise3_UnrotatedBase(seed: i64, xr: f64, yr: f64, zr: f64) f32 {
     return value;
 }
 
-//    4D OpenSimplex2 noise, with XYZ oriented like noise3_ImproveXY
+//    4D OpenSimplex2 noise, with XYZ oriented like noise3ImproveXY
 //    and W for an extra degree of freedom. W repeats eventually.
 //    Recommended for time-varied animations which texture a 3D object (W=time)
 //    in a space where Z is vertical
 
-pub fn noise4_ImproveXYZ_ImproveXY(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
+pub fn noise4ImproveXYZImproveXY(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     const xy = x + y;
     const s2 = xy * -0.21132486540518699998;
     const zz = z * 0.28867513459481294226;
@@ -327,15 +327,15 @@ pub fn noise4_ImproveXYZ_ImproveXY(seed: i64, x: f64, y: f64, z: f64, w: f64) f3
     const zr = xy * -0.57735026918962599998 + (zz + ww);
     const wr = z * -0.866025403784439 + ww;
 
-    return noise4_UnskewedBase(seed, xr, yr, zr, wr);
+    return noise4UnskewedBase(seed, xr, yr, zr, wr);
 }
 
-//    4D OpenSimplex2 noise, with XYZ oriented like noise3_ImproveXZ
+//    4D OpenSimplex2 noise, with XYZ oriented like noise3ImproveXZ
 //    and W for an extra degree of freedom. W repeats eventually.
 //    Recommended for time-varied animations which texture a 3D object (W=time)
 //    in a space where Y is vertical
 
-pub fn noise4_ImproveXYZ_ImproveXZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
+pub fn noise4ImproveXYZImproveXZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     const xz = x + z;
     const s2 = xz * -0.21132486540518699998;
     const yy = y * 0.28867513459481294226;
@@ -345,15 +345,15 @@ pub fn noise4_ImproveXYZ_ImproveXZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f3
     const yr = xz * -0.57735026918962599998 + (yy + ww);
     const wr = y * -0.866025403784439 + ww;
 
-    return noise4_UnskewedBase(seed, xr, yr, zr, wr);
+    return noise4UnskewedBase(seed, xr, yr, zr, wr);
 }
 
-//    4D OpenSimplex2 noise, with XYZ oriented like noise3_Fallback
+//    4D OpenSimplex2 noise, with XYZ oriented like noise3Fallback
 //    and W for an extra degree of freedom. W repeats eventually.
 //    Recommended for time-varied animations which texture a 3D object (W=time)
 //    where there isn't a clear distinction between horizontal and vertical
 
-pub fn noise4_ImproveXYZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
+pub fn noise4ImproveXYZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     const xyz = x + y + z;
     const ww = w * 0.2236067977499788;
     const s2 = xyz * -0.16666666666666666 + ww;
@@ -362,7 +362,7 @@ pub fn noise4_ImproveXYZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     const zs = z + s2;
     const ws = -0.5 * xyz + ww;
 
-    return noise4_UnskewedBase(seed, xs, ys, zs, ws);
+    return noise4UnskewedBase(seed, xs, ys, zs, ws);
 }
 
 
@@ -370,7 +370,7 @@ pub fn noise4_ImproveXYZ(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
 //    Recommended for 3D terrain, where X and Y (or Z and W) are horizontal.
 //    Recommended for noise(x, y, sin(time), cos(time)) trick.
 
-pub fn noise4_ImproveXY_ImproveZW(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
+pub fn noise4ImproveXYImproveZW(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     const s2 = (x + y) * -0.178275657951399372 + (z + w) * 0.215623393288842828;
     const t2 = (z + w) * -0.403949762580207112 + (x + y) * -0.375199083010075342;
     const xs = x + s2;
@@ -378,12 +378,12 @@ pub fn noise4_ImproveXY_ImproveZW(seed: i64, x: f64, y: f64, z: f64, w: f64) f32
     const zs = z + t2;
     const ws = w + t2;
 
-    return noise4_UnskewedBase(seed, xs, ys, zs, ws);
+    return noise4UnskewedBase(seed, xs, ys, zs, ws);
 }
 
 //    4D OpenSimplex2 noise, fallback lattice orientation.
 
-pub fn noise4_Fallback(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
+pub fn noise4Fallback(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     // Get points for A4 lattice
     const s = @as(f64, SKEW_4D) * (x + y + z + w);
     const xs = x + s;
@@ -391,12 +391,12 @@ pub fn noise4_Fallback(seed: i64, x: f64, y: f64, z: f64, w: f64) f32 {
     const zs = z + s;
     const ws = w + s;
 
-    return noise4_UnskewedBase(seed, xs, ys, zs, ws);
+    return noise4UnskewedBase(seed, xs, ys, zs, ws);
 }
 
 //    4D OpenSimplex2 noise base.
 
-fn noise4_UnskewedBase(seed: i64, xs: f64, ys: f64, zs: f64, ws: f64) f32 {
+fn noise4UnskewedBase(seed: i64, xs: f64, ys: f64, zs: f64, ws: f64) f32 {
     var vseed = seed;
 
     // Get base points and offsets
@@ -878,11 +878,11 @@ test "Noise2" {
 	try std.testing.expectEqual(grads[0], 38.2059097290039062);
 	try std.testing.expectEqual(grads[128], -13.0313243865966797);
 	try std.testing.expectEqual(grads[255], 92.2372283935546875);
-	var value = noise2_UnskewedBase(1234, 8.0000000000000000, 16.0000000000000000);
+	var value = noise2UnksewedBase(1234, 8.0000000000000000, 16.0000000000000000);
 	try std.testing.expectEqual(value, 0.0000000000000000);
 	value = noise2(1234, 8.0000000000000000, 16.0000000000000000);
 	try std.testing.expectEqual(value, -0.6702778339385986);
-	value = noise2_ImproveX(1234, 8.0000000000000000, 16.0000000000000000);
+	value = noise2ImproveX(1234, 8.0000000000000000, 16.0000000000000000);
 	try std.testing.expectEqual(value, 0.8980175852775574);
 }
 test "Noise3" {
@@ -890,13 +890,13 @@ test "Noise3" {
 	try std.testing.expectEqual(grads[0], 27.9145565032958984);
 	try std.testing.expectEqual(grads[512], -12.5473070144653320);
 	try std.testing.expectEqual(grads[1023], 0.0000000000000000);
-	var value = noise3_UnrotatedBase(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000);
+	var value = noise3UnrotatedBase(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000);
 	try std.testing.expectEqual(value, 0.0000000000000000);
-	value = noise3_ImproveXY(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000);
+	value = noise3ImproveXY(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000);
 	try std.testing.expectEqual(value, -0.3367099165916443);
-	value = noise3_ImproveXZ(1234, 8, 16, 32);
+	value = noise3ImproveXZ(1234, 8, 16, 32);
 	try std.testing.expectEqual(value, 0.5532622933387756);
-	value = noise3_Fallback(1234, 8, 16, 32);
+	value = noise3Fallback(1234, 8, 16, 32);
 	try std.testing.expectEqual(value, -0.3753036260604858);
 }
 test "Noise4" {
@@ -904,14 +904,14 @@ test "Noise4" {
 	try std.testing.expectEqual(grads[0], -30.6274547576904297);
 	try std.testing.expectEqual(grads[1024], -14.7221689224243164);
 	try std.testing.expectEqual(grads[2047], 14.7221689224243164);
-	var value = noise4_ImproveXYZ_ImproveXY(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
+	var value = noise4ImproveXYZImproveXY(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
 	try std.testing.expectEqual(value, 0.5079321861267090);
-	value = noise4_ImproveXYZ_ImproveXZ(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
+	value = noise4ImproveXYZImproveXZ(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
 	try std.testing.expectEqual(value, 0.5979672074317932);
-	value = noise4_ImproveXYZ(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
+	value = noise4ImproveXYZ(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
 	try std.testing.expectEqual(value, 0.0456629171967506);
-	value = noise4_ImproveXY_ImproveZW(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
+	value = noise4ImproveXYImproveZW(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
 	try std.testing.expectEqual(value, -0.2609163820743561);
-	value = noise4_Fallback(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
+	value = noise4Fallback(1234, 8.0000000000000000, 16.0000000000000000, 32.0000000000000000, 64.0000000000000000);
 	try std.testing.expectEqual(value, 0.2662846744060516);
 }
