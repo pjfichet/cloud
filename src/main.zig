@@ -107,7 +107,7 @@ pub fn main() !void {
     for (0..height) |h| {
     	for (0..width) |w| {
     		pixel = getNoise(seed, @as(f64, @floatFromInt(w)), @as(f64, @floatFromInt(h)));
-			pixel -= @as(f32, @floatCast(getRadiant(width, height, @as(u64, w), @as(u64, h))));
+			pixel -= @as(f32, @floatCast(getRadius(width, height, @as(u64, w), @as(u64, h))));
 			const rgb = getColor(height, h, getRgb(background), getRgb(foreground), pixel);
 			try image.setPixel(w, h, rgb);
 		}
@@ -131,7 +131,7 @@ fn getNoise(seed: i64, w: f64, h: f64) f32 {
 	return (value + 1) / 2;
 }
 
-fn getRadiant(width: u64, height: u64, w: u64, h: u64) f64 {
+fn getRadius(width: u64, height: u64, w: u64, h: u64) f64 {
 	var ch: f64 = @as(f64, @floatFromInt(height)) / 2;
 	var cw: f64 = @as(f64, @floatFromInt(width)) / 2;
 	var fw: f64 = @as(f64, @floatFromInt(w));
