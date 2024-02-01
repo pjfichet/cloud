@@ -34,20 +34,11 @@ const crc32 = [_]u32 {
 	    0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-fn swap32(num: u32) u32 {
-	return ((num >> 24) & 0xff) |
-	       ((num << 8) & 0xff0000) |
-	       ((num >> 8) & 0xff00) |
-	       ((num << 24) & 0xff000000);
-}
-
 fn crc(data: []const u8, len: usize, oldcrc: u32) u32 {
 	var newcrc = oldcrc;
 	for (0..len) |i| {
 	    newcrc = crc32[(newcrc ^ data[i]) & 255] ^ (newcrc >> 8);
-		//std.debug.print("data: {d}, newcrc: {d}\n", .{data[i], newcrc});
 	}
-	//std.debug.print("data: {s}, crc: {d}\n", .{data, newcrc});
 	return newcrc;
 }
 
@@ -124,14 +115,11 @@ pub const pngStruct = struct {
 	    if (x >= png.width or y >= png.height) {
 	    	return error.WrongCoordinates;
 	    }
-	    // https://stackoverflow.com/questions/74701099/how-to-insert-a-u32-into-a-u8-array-in-zig
 	    if (png.pngtype == .palette or png.pngtype == .grayscale) {
 	        png.data[x + y * png.width] = @as(u8, @intCast(color & 0xff));
 	    } else if (png.pngtype == .grayscale_alpha) {
-	    	// writeIntBig, writeIntNative
 	    	std.mem.writeIntBig(u16, png.data[(x + y * png.width) * @sizeOf(u16)..][0..@sizeOf(u16)], @as(u16, @intCast(color & 0xffff)) );
 	    } else {
-	    	//std.debug.print("index({}, {}, {}): {}\n", .{x, y, png.width, x + y * png.width * @sizeOf(u32)});
 	    	std.mem.writeIntBig(u32, png.data[(x + y * png.width) * @sizeOf(u32)..][0..@sizeOf(u32)], color);
 	    }
 	}
@@ -142,13 +130,10 @@ pub const pngStruct = struct {
 	        return pixel;
 	    }
 	    if (png.pngtype == .palette or png.pngtype == .grayscale) {
-	        //pixel = (uint32_t)(png.data[x + y * png.width] & 0xff);
 	        pixel = @as(u32, png.data[x + y * png.width] & 0xff);
 	    } else if (png.pngtype == .grayscale_alpha) {
-	        //pixel = (uint32_t)(((uint16_t *) png.data)[x + y * png.width] & 0xffff);
 	        pixel = @as(u32, std.mem.readIntBig(u16, png.data[(x + y * png.width) * @sizeOf(u16)..][0..@sizeOf(u16)]) & 0xffff);
 	    } else {
-	        //pixel = ((uint32_t *) png.data)[x + y * png.width];
 	        pixel = std.mem.readIntBig(u32, png.data[(x + y * png.width) * @sizeOf(u32)..][0..@sizeOf(u32)]);
 	    }
 	    return pixel;
@@ -165,12 +150,13 @@ pub const pngStruct = struct {
 	}
 
 	fn outRawU32(png: *pngStruct, val: u32) void {
-		std.mem.writeIntNative(u32, png.out[png.out_pos..][0..@sizeOf(u32)], val);
+		std.mem.writeIntBig(u32, png.out[png.out_pos..][0..@sizeOf(u32)], val);
 	    png.out_pos += 4;
 	}
 
 	fn outRawU16(png: *pngStruct, val: u16) void {
-	    std.mem.writeIntNative(u16, png.out[png.out_pos..][0..@sizeOf(u16)], val);
+		// Deflate specification: expects little indian
+	    std.mem.writeIntLittle(u16, png.out[png.out_pos..][0..@sizeOf(u16)], val);
 	    png.out_pos += 2;
 	}
 
@@ -180,27 +166,33 @@ pub const pngStruct = struct {
 	}
 
 	fn newChunk(png: *pngStruct,name: []const u8, len: usize) void {
+		// png specification
+		// each chunk consists of 3 or 4 fields (the chunk data may be empty):
+		// length (4b), chunk type (4b), chunk data, crc (4b).
+		// crc is calculated on chunk type and chunk data.
 	    png.crc = 0xffffffff;
-	    png.outRawU32(swap32(@as(u32, @intCast(len))) );
+	    png.outRawU32(@as(u32, @intCast(len)) );
 	    png.crc = crc(name, 4, png.crc);
 	    png.outRawWrite(name, 4);
 	}
 
 	fn endChunk(png: *pngStruct) void {
-	    png.outRawU32(swap32(~png.crc));
-	    //std.debug.print("end chunk crc: {d} {d} {d}\n", .{png.crc, ~png.crc, swap32(~png.crc)});
+	    png.outRawU32(~png.crc);
 	}
 
 	fn outU32(png: *pngStruct, val: u32) void {
 		var data: [4]u8 = undefined;
-		std.mem.writeIntNative(u32, data[0..4], val);
+		std.mem.writeIntBig(u32, data[0..4], val);
 	    png.crc = crc(&data, 4, png.crc);
 	    png.outRawU32(val);
 	}
 
 	fn outU16(png: *pngStruct, val: u16) void {
 		var data: [2]u8 = undefined;
-		std.mem.writeIntNative(u16, data[0..2], val);
+		// We're inside deflate specification, which states that
+		// all multi-byte numbers are stored with the least-significant byte first
+		// ie, little endian.
+		std.mem.writeIntLittle(u16, data[0..2], val);
 	    png.crc = crc(&data, 2, png.crc);
 	    png.outRawU16(val);
 	}
@@ -212,43 +204,47 @@ pub const pngStruct = struct {
 	}
 
 	fn outWrite(png: *pngStruct, data: []const u8, len: usize) void {
-		//todo: png->crc = libattopng_crc((const unsigned char *) data, len, png->crc);
 	    png.crc = crc(data, len, png.crc);
 	    png.outRawWrite(data, len);
 	}
 
 	fn outWriteAdler(png: *pngStruct, val: u8) void {
-	    //png.outWrite(png, (char *) &data, 1);
 		const data = [_]u8 {val};
 	    png.outWrite(&data, 1);
-		//std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
-	    //png.s1 = @as(u16, (png.s1 +% val) % LIBATTOPNG_ADLER_BASE);
-	    //png.s2 = @as(u16, (png.s2 + png.s1) % LIBATTOPNG_ADLER_BASE);
 		// modulo should ensure we don't need to wrap. But we need to handle
 		// integer overflow.
 		const s1: u32 = @as(u32, png.s1) + @as(u32, val);
 		png.s1 = @as(u16, @intCast(s1 % LIBATTOPNG_ADLER_BASE));
 		const s2: u32 = @as(u32, png.s2)  + @as(u32, png.s1);
 		png.s2 = @as(u16, @intCast(s2 % LIBATTOPNG_ADLER_BASE));
-
-	    //png.s1 = (png.s1 +% val) % LIBATTOPNG_ADLER_BASE;
-	    //png.s2 = (png.s2 +% png.s1) % LIBATTOPNG_ADLER_BASE;
-		//std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
 	}
 
-	fn pixelHeader(png: *pngStruct, offset: usize, bpl: usize) void {
+	fn deflateBlockHeader(png: *pngStruct, offset: usize, bpl: usize) void {
+        // deflate stream format:
+        // first bit: 0: not the last block, 1: the last block
+        // next two bits: 00: a not compressed block, 01: a huffman compressed block,
+        // 10: a dynamic huffman compressed block, 11: reserved.
+        // Non compressed blocks format:
+        // - bits 1-2: len,
+        // - bits 3-4: ~len,
+        // - bits ...: len bits of literal data. 
 	    if (offset > bpl) {
 	        // not the last line
-	        //libattopng_outWrite(png, "\0", 1);
 	        const nul = [1]u8 {0};
-	        png.outWrite(&nul, 1);
+	        // this is not the last block: first bit is 0,
+	        // this is not a compressed block: next two bits are 0.
+	        // Is this is written all at once as u8 0 ?
+			png.outWrite(&nul, 1);
+			// len and ~len
 	        png.outU16(@as(u16, @intCast(bpl)) );
-	        png.outU16(~@as(u16, @intCast(bpl)) );
+			png.outU16(~@as(u16, @intCast(bpl)) );
 	    } else {
-	        // last line
-	        //libattopng_outWrite(png, "\1", 1);
+	        // this is the last block: first bit is 1,
+	        // this is not a compressed block: next two bits are 0.
+	        // Is this is written all at once as u8 1 ?
 	        const one = [1]u8 {1};
 	        png.outWrite(&one, 1);
+	        // len and ~len
 	        png.outU16(@as(u16, @intCast(offset)) );
 	        png.outU16(~@as(u16, @intCast(offset)) );
 	    }
@@ -256,8 +252,6 @@ pub const pngStruct = struct {
 
 	////////////////////////////////////////////////////////////////////////////
 	pub fn build(png: *pngStruct) !void {
-	    // size_t index, bpl, raw_size, size, p, pos, corr;
-	    //unsigned char *pixel;
 	    if (png.out_capacity > 0) {
 	        // delete old output if any
 	        png.allocator.free(png.out);
@@ -267,21 +261,22 @@ pub const pngStruct = struct {
 	    errdefer png.allocator.free(png.out);
 
 		// PNG header
-	    // libattopng_outRawWrite(png, "\211PNG\r\n\032\n", 8);
 		png.outRawU8(137);
 		png.outRawWrite("PNG\r\n", 5);
-		png.outRawU8(26);
+		png.outRawU8(26); // ctrl-Z
 		png.outRawWrite("\n", 1);
 
 		// IHDR
+		// width, height, bit depth, color type,
+		// compression method, filter method, interlace method
 		png.newChunk("IHDR", 13);
-		png.outU32(swap32( @as(u32, @intCast(png.width)) ));
-		png.outU32(swap32(@as(u32, @intCast(png.height)) ));
-	    png.outU8(8); // bit depth
+		png.outU32(@as(u32, @intCast(png.width)) );
+		png.outU32(@as(u32, @intCast(png.height)) );
+	    png.outU8(8); // bit depth: 1, 2, 4, 8 or 16
 	    png.outU8(@intFromEnum(png.pngtype));
-	    png.outU8(0); // compression
-	    png.outU8(0); // filter
-	    png.outU8(0); // interlace method
+	    png.outU8(0); // compression method
+	    png.outU8(0); // filter method 
+	    png.outU8(0); // interlace method (0: no interlace or 1: adam7)
 	    png.endChunk();
 
 
@@ -311,7 +306,7 @@ pub const pngStruct = struct {
 	    }
 
 	    // data
-	    var bpl = 1 + png.bpp * png.width;
+	    var bpl = 1 + png.bpp * png.width; // bits per line
 	    if (bpl >= 65536) {
 	        std.debug.print("[libattopng] ERROR: maximum supported width for this type of PNG is {d} pixel\n",
 	        	.{65535 / @as(u32, @intCast(png.bpp))});
@@ -319,9 +314,7 @@ pub const pngStruct = struct {
 	    }
 	    var raw_size = png.height * bpl;
 	    var size = 2 + png.height * (5 + bpl) + 4;
-	    //std.debug.print("width: {d}, height: {d}, bpp: {d}, bpl: {d}\n", .{png.width, png.height, png.bpp, bpl});
 	    png.newChunk("IDAT", size);
-	    //png.outWrite(png, "\170\332", 2);
 	    png.outU8(120);
 	    png.outU8(218);
 
@@ -331,14 +324,13 @@ pub const pngStruct = struct {
 	    while (pos < png.width * png.height) : (pos += 1) {
 	        if (index == 0) {
 	            // line header
-	            png.pixelHeader(raw_size, bpl);
-	            png.outWriteAdler(0); // no filter
+	            png.deflateBlockHeader(raw_size, bpl);
+	            png.outWriteAdler(0); // filter type 0 = no filter
 	            raw_size -= 1;
 	        }
 
 	        // pixel
 	        for (0..png.bpp) |_| {
-	        	//std.debug.print("pixel[{d}]: {x}\n", .{pixel, png.data[pixel]});
 	            png.outWriteAdler(png.data[pixel]);
 	            pixel += 1;
 	        }
@@ -350,11 +342,9 @@ pub const pngStruct = struct {
 	        index = (index + 1) % png.width;
 	    }
 	    // checksum
-	    //std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
 	    png.s1 %= LIBATTOPNG_ADLER_BASE;
 	    png.s2 %= LIBATTOPNG_ADLER_BASE;
-	    //std.debug.print("s1: {}, s2: {}\n", .{png.s1, png.s2});
-	    png.outU32(swap32(@as(u32, (@as(u32, png.s2) << 16) | png.s1)) );
+	    png.outU32(@as(u32, (@as(u32, png.s2) << 16) | png.s1) ) ;
 	    png.endChunk();
 
 	    // end of image
@@ -387,18 +377,9 @@ test "pngstruct" {
 		for (0..4) |y| {
 			try png.setPixel(x, y, colors[x  + y * 4]);
 			pixel = png.getPixel(x, y);
-//			std.debug.print("pixel {d} {d}: {x}\n", .{x, y, pixel});
 			try std.testing.expectEqual(pixel, colors[x + y * 4]);
 		}
 	}
-	//std.debug.print("data: {any}\n", .{png.data});
-//	for (0..png.data.len) |z| {
-//		std.debug.print("data[{d}] = {x}\n", .{z, png.data[z]});
-//	}
-//	for (0..16) |p| {
-//		pixel = std.mem.readIntNative(u32, png.data[p..][0..@sizeOf(u32)]);
-//		std.debug.print("pixel[{d}] = {x}\n", .{p, pixel});
-//	}
 	try png.build();
 	try png.write("test.png");
 	try png.deinit();
@@ -414,9 +395,4 @@ test "color" {
 	try png.build();
 	try png.write("test.png");
 	try png.deinit();
-}
-
-test "swap32" {
-	const x = 0xaabbccdd;
-	std.debug.print("swap32({x}) = {x}\n", .{x, swap32(x)});
 }
