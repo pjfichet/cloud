@@ -306,14 +306,14 @@ pub const pngStruct = struct {
 	    }
 
 	    // data
-	    var bpl = 1 + png.bpp * png.width; // bits per line
+	    const bpl = 1 + png.bpp * png.width; // bits per line
 	    if (bpl >= 65536) {
 	        std.debug.print("[libattopng] ERROR: maximum supported width for this type of PNG is {d} pixel\n",
 	        	.{65535 / @as(u32, @intCast(png.bpp))});
 	        return error.pngTooBig;
 	    }
 	    var raw_size = png.height * bpl;
-	    var size = 2 + png.height * (5 + bpl) + 4;
+	    const size = 2 + png.height * (5 + bpl) + 4;
 	    png.newChunk("IDAT", size);
 	    png.outU8(120);
 	    png.outU8(218);

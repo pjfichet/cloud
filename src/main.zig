@@ -98,9 +98,8 @@ pub fn main() !void {
             return;
         }
     }
-    //std.debug.print("seed: {d}, width: {d}, height: {d}, filename: {s}\n", .{ seed, width, height, filename.items });
-    //std.debug.print("background: {s}, foreground: {s}\n", .{ background.items, foreground.items });
-	std.debug.print("Creating {s} ({d}x{d}) with seed {d}.\n", .{filename.items, width, height, seed});
+	std.debug.print("Creating {s} ({d}x{d}) with seed {d}, bg {x}, fg {x}.\n",
+		.{filename.items, width, height, seed, background, foreground});
 
 	var pixel: f32 = undefined;
 	var image: png.pngStruct = try png.pngStruct.init(width, height, png.pngType.rgb, allocator);
@@ -120,22 +119,24 @@ pub fn main() !void {
 fn getNoise(seed: i64, w: f64, h: f64) f32 {
 	// feature size (24)
 	const fsize = 48;
+	// Four octaves: frequence N, N/2, N/4, N/8
+	// with relatives amplitudes: 8:4:2:1
+	const v0 = noise.noise2(seed, w / fsize / 8 , h / fsize / 8);
+	const v1 = noise.noise2(seed, w / fsize / 4 , h / fsize / 4);
+	const v2 = noise.noise2(seed, w / fsize / 2, h / fsize / 2);
+	const v3 = noise.noise2(seed, w / fsize / 1, h / fsize / 1);
+	const value = v0 * 8 / 13.0 + v1 * 4 / 13.0 + v2 * 2 / 13.0 + v3 * 1 / 13.0;
 	// Three octaves: frequency N, N/2 and N/4
 	// with relative amplitudes 4:2:1.
-	var v0 = noise.noise2(seed, w / fsize / 8 , h / fsize / 8);
-	var v1 = noise.noise2(seed, w / fsize / 4 , h / fsize / 4);
-	var v2 = noise.noise2(seed, w / fsize / 2, h / fsize / 2);
-	var v3 = noise.noise2(seed, w / fsize / 1, h / fsize / 1);
-	var value = v0 * 8 / 13.0 + v1 * 4 / 13.0 + v2 * 2 / 13.0 + v3 * 1 / 13.0;
 	//var value = v1 * 4 / 7.0 + v2 * 2 / 7.0 + v3 * 1 / 7.0;
 	return (value + 1) / 2;
 }
 
 fn getRadius(width: u64, height: u64, w: u64, h: u64) f64 {
-	var ch: f64 = @as(f64, @floatFromInt(height)) / 2;
-	var cw: f64 = @as(f64, @floatFromInt(width)) / 2;
-	var fw: f64 = @as(f64, @floatFromInt(w));
-	var fh: f64 = @as(f64, @floatFromInt(h));
+	const ch: f64 = @as(f64, @floatFromInt(height)) / 2;
+	const cw: f64 = @as(f64, @floatFromInt(width)) / 2;
+	const fw: f64 = @as(f64, @floatFromInt(w));
+	const fh: f64 = @as(f64, @floatFromInt(h));
 	var value = std.math.sqrt( (ch-fh)*(ch-fh) + (cw-fw)*(cw-fw) );
 	value = value / (@as(f64, @floatFromInt(height)) / 1.5);
 	if (value > 1) {
@@ -174,7 +175,7 @@ fn getColor(height: u64, h: u64, bg: [3]u8, fg: [3]u8, pixel: f32) u32 {
 }
 
 fn getGradient(height: u64, h: u64, color: u8) u8 {
-	// we want a gradient background.
+	// we want a gradient background, darker on top.
 	// This calculates the gradient color for a given row.
 	return @as(u8, @intFromFloat(@floor(
 		@as(f32, @floatFromInt(color)) +

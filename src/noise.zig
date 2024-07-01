@@ -439,7 +439,7 @@ fn noise4UnskewedBase(seed: i64, xs: f64, ys: f64, zs: f64, ws: f64) f32 {
     var i: usize = 0;
     while (true) : (i += 1) {
         // Next point is the closest vertex on the 4-simplex whose base vertex is the aforementioned vertex.
-        var score0 = 1.0 + ssi * (-1.0 / UNSKEW_4D); // Seems slightly faster than 1.0-xsi-ysi-zsi-wsi
+        const score0 = 1.0 + ssi * (-1.0 / UNSKEW_4D); // Seems slightly faster than 1.0-xsi-ysi-zsi-wsi
         if (xsi >= ysi and xsi >= zsi and xsi >= wsi and xsi >= score0) {
             xsvp = xsvp +% PRIME_X;
             xsi -= 1.0;
@@ -543,7 +543,7 @@ fn grad4(
     hash = hash *% HASH_MULTIPLIER;
     hash ^= hash >> (64 - N_GRADS_4D_EXPONENT + 2);
     const gi = (@as(usize, @intCast(hash)) & @as(usize, (N_GRADS_4D - 1) << 2));
-    var grads = gradients.gradients4D;
+    const grads = gradients.gradients4D;
     return (grads[gi | 0] * dx + grads[gi | 1] * dy) + (grads[gi | 2] * dz + grads[gi | 3] * dw);
 }
 
