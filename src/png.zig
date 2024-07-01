@@ -118,9 +118,13 @@ pub const pngStruct = struct {
 	    if (png.pngtype == .palette or png.pngtype == .grayscale) {
 	        png.data[x + y * png.width] = @as(u8, @intCast(color & 0xff));
 	    } else if (png.pngtype == .grayscale_alpha) {
-	    	std.mem.writeIntBig(u16, png.data[(x + y * png.width) * @sizeOf(u16)..][0..@sizeOf(u16)], @as(u16, @intCast(color & 0xffff)) );
+	    	// std.mem.writeIntBig(type, buffer, value)
+			// std.mem.writeInt(type, buffer, value, endian)
+	    	std.mem.writeInt(u16, png.data[(x + y * png.width) * @sizeOf(u16)..][0..@sizeOf(u16)],
+	    		@as(u16, @intCast(color & 0xffff)), std.builtin.Endian.big);
 	    } else {
-	    	std.mem.writeIntBig(u32, png.data[(x + y * png.width) * @sizeOf(u32)..][0..@sizeOf(u32)], color);
+	    	std.mem.writeInt(u32, png.data[(x + y * png.width) * @sizeOf(u32)..][0..@sizeOf(u32)],
+	    		color, std.builtin.Endian.big);
 	    }
 	}
 
@@ -132,9 +136,10 @@ pub const pngStruct = struct {
 	    if (png.pngtype == .palette or png.pngtype == .grayscale) {
 	        pixel = @as(u32, png.data[x + y * png.width] & 0xff);
 	    } else if (png.pngtype == .grayscale_alpha) {
-	        pixel = @as(u32, std.mem.readIntBig(u16, png.data[(x + y * png.width) * @sizeOf(u16)..][0..@sizeOf(u16)]) & 0xffff);
+	        pixel = @as(u32, std.mem.readInt(u16, png.data[(x + y * png.width) * @sizeOf(u16)..][0..@sizeOf(u16)], std.builtin.Endian.big) & 0xffff);
 	    } else {
-	        pixel = std.mem.readIntBig(u32, png.data[(x + y * png.width) * @sizeOf(u32)..][0..@sizeOf(u32)]);
+	        pixel = std.mem.readInt(u32, png.data[(x + y * png.width) * @sizeOf(u32)..][0..@sizeOf(u32)],
+	        	std.buitin.Endian.big);
 	    }
 	    return pixel;
 	}
@@ -150,13 +155,15 @@ pub const pngStruct = struct {
 	}
 
 	fn outRawU32(png: *pngStruct, val: u32) void {
-		std.mem.writeIntBig(u32, png.out[png.out_pos..][0..@sizeOf(u32)], val);
+		std.mem.writeInt(u32, png.out[png.out_pos..][0..@sizeOf(u32)],
+			val, std.builtin.Endian.big);
 	    png.out_pos += 4;
 	}
 
 	fn outRawU16(png: *pngStruct, val: u16) void {
 		// Deflate specification: expects little indian
-	    std.mem.writeIntLittle(u16, png.out[png.out_pos..][0..@sizeOf(u16)], val);
+	    std.mem.writeInt(u16, png.out[png.out_pos..][0..@sizeOf(u16)],
+	    	val, std.builtin.Endian.little);
 	    png.out_pos += 2;
 	}
 
@@ -182,7 +189,7 @@ pub const pngStruct = struct {
 
 	fn outU32(png: *pngStruct, val: u32) void {
 		var data: [4]u8 = undefined;
-		std.mem.writeIntBig(u32, data[0..4], val);
+		std.mem.writeInt(u32, data[0..4], val, std.builtin.Endian.big);
 	    png.crc = crc(&data, 4, png.crc);
 	    png.outRawU32(val);
 	}
@@ -192,7 +199,7 @@ pub const pngStruct = struct {
 		// We're inside deflate specification, which states that
 		// all multi-byte numbers are stored with the least-significant byte first
 		// ie, little endian.
-		std.mem.writeIntLittle(u16, data[0..2], val);
+		std.mem.writeInt(u16, data[0..2], val, std.builtin.Endian.little);
 	    png.crc = crc(&data, 2, png.crc);
 	    png.outRawU16(val);
 	}

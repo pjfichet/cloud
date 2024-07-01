@@ -171,7 +171,7 @@ fn getColor(height: u64, h: u64, bg: [3]u8, fg: [3]u8, pixel: f32) u32 {
 	if (rgb[2] > 255) {rgb[2] = 255;}
 	if (rgb[2] < 0) {rgb[2] = 0;}
 
-	return std.mem.readIntBig(u32, rgb[0..4]);
+	return std.mem.readInt(u32, rgb[0..4], std.builtin.Endian.big);
 }
 
 fn getGradient(height: u64, h: u64, color: u8) u8 {
