@@ -14,17 +14,17 @@ The png library (src/png.zig) is a port of Michael Schwars libattopng.
 ### Build and install
 
 You will need the stable zig release (version 0.11).
-To build and install in `$(HOME)/.local/bin/cloud`, run:
+To build and install in `$HOME/.local/bin/cloud`, run:
 
-	zig build -Doptimize=ReleaseSafe -p $(HOME)/.local/
+	zig build -Doptimize=ReleaseSafe -p $HOME/.local/
 
 ### usage
 
 $ cloud [options]
-	-s <seed> (default to std.time.timestamp())
-	-w <width> (default to 512)
-	-h <height> (default to 512)
-    -b <backround-color> (default #00bbff)
-    -f <foreground-color> (default #ffffff)
+    -s <seed> (default to std.time.timestamp())
+    -w <width> (default to 512)
+    -h <height> (default to 512)
+    -b <backround-color> (default 0088ee)
+    -f <foreground-color> (default ffffff)
     -o <outputfile> (default cloud.png)
 

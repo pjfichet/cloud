@@ -20,7 +20,7 @@ pub fn main() !void {
     var seed: i64 = std.time.timestamp();
     var width: u64 = 512;
     var height: u64 = 512;
-    var background: u24 = 0x00bbff;
+    var background: u24 = 0x0088ee;
     var foreground: u24 = 0xffffff;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
