@@ -13,7 +13,7 @@ The png library (src/png.zig) is a port of Michael Schwars libattopng.
 
 ### Build and install
 
-You will need the stable zig release (version 0.11).
+You will need the stable zig release (version 0.12).
 To build and install in `$HOME/.local/bin/cloud`, run:
 
 	zig build -Doptimize=ReleaseSafe -p $HOME/.local/
