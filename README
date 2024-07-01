@@ -24,7 +24,7 @@ $ cloud [options]
 	-s <seed> (default to std.time.timestamp())
 	-w <width> (default to 512)
 	-h <height> (default to 512)
-    -b <backround-color> (default 00bbff)
-    -f <foreground-color> (default ffffff)
+    -b <backround-color> (default #00bbff)
+    -f <foreground-color> (default #ffffff)
     -o <outputfile> (default cloud.png)
 
